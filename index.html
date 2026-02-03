@@ -34,6 +34,17 @@ button {
   margin: 6px;
   cursor: pointer;
 }
+
+#topbar {
+  margin-bottom: 10px;
+}
+
+#ende {
+  display: none;
+  font-size: 2.5em;
+  margin-top: 40px;
+  color: #00ffcc;
+}
 </style>
 </head>
 
@@ -41,13 +52,21 @@ button {
 
 <h1>Bilderrätsel</h1>
 
+<div id="topbar">
+  <button onclick="startModus('leicht')">Leicht</button>
+  <button onclick="startModus('schwer')">Schwer</button>
+  <button onclick="startModus('neu')">Neu</button>
+  <button onclick="neuMischen()">Neu mischen</button>
+  <button onclick="fullscreen()">Fullscreen</button>
+</div>
+
 <img id="bild">
 <div id="loesung"></div>
+<div id="ende">🎉 Runde geschafft!</div>
 
 <div>
   <button onclick="zurueck()">← Zurück</button>
   <button onclick="weiter()">Weiter →</button>
-  <button onclick="fullscreen()">Fullscreen</button>
 </div>
 
 <script>
@@ -56,19 +75,24 @@ button {
 // ===================
 const GITHUB_USER = "DieZiege1337";
 const GITHUB_REPO = "wasistdas";
-const ORDNER = "bilder";
 // ===================
 
 let bilder = [];
+let original = [];
 let index = 0;
 let loesungSichtbar = false;
+let aktuellerOrdner = "";
 
-async function ladeBilder() {
-  const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${ORDNER}`;
+// Bilder aus GitHub laden
+async function ladeBilder(ordner) {
+  aktuellerOrdner = ordner;
+  document.getElementById("ende").style.display = "none";
+
+  const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${ordner}`;
   const res = await fetch(url);
   const daten = await res.json();
 
-  bilder = daten
+  original = daten
     .filter(f => f.type === "file" && f.name.match(/\.(jpg|jpeg|png|webp)$/i))
     .map(f => ({
       src: f.download_url,
@@ -77,16 +101,22 @@ async function ladeBilder() {
         .replace(/[_-]/g, " ")
     }));
 
-  if (!bilder.length) {
-    alert("Keine Bilder gefunden.");
+  if (!original.length) {
+    alert("Keine Bilder im Ordner: " + ordner);
     return;
   }
 
+  neuMischen();
+}
+
+function neuMischen() {
+  bilder = [...original];
   shuffle(bilder);
+  index = 0;
   anzeigen();
 }
 
-// Zufällige Reihenfolge
+// Zufallsmischer
 function shuffle(a) {
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -95,10 +125,11 @@ function shuffle(a) {
 }
 
 function anzeigen() {
+  document.getElementById("bild").style.display = "block";
   document.getElementById("bild").src = bilder[index].src;
-  const l = document.getElementById("loesung");
-  l.innerText = bilder[index].loesung;
-  l.style.display = "none";
+  document.getElementById("loesung").innerText = bilder[index].loesung;
+  document.getElementById("loesung").style.display = "none";
+  document.getElementById("ende").style.display = "none";
   loesungSichtbar = false;
 }
 
@@ -109,6 +140,10 @@ function weiter() {
   } else if (index < bilder.length - 1) {
     index++;
     anzeigen();
+  } else {
+    document.getElementById("bild").style.display = "none";
+    document.getElementById("loesung").style.display = "none";
+    document.getElementById("ende").style.display = "block";
   }
 }
 
@@ -117,6 +152,10 @@ function zurueck() {
     index--;
     anzeigen();
   }
+}
+
+function startModus(name) {
+  ladeBilder(name);
 }
 
 function fullscreen() {
@@ -129,8 +168,8 @@ document.addEventListener("keydown", e => {
   if (e.key === "ArrowLeft") zurueck();
 });
 
-// Start
-ladeBilder();
+// Startstandard
+startModus("leicht");
 </script>
 
 </body>
