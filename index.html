@@ -13,9 +13,7 @@ body {
   text-align: center;
 }
 
-h1 {
-  margin: 10px 0;
-}
+h1 { margin: 10px 0; }
 
 #bild {
   max-width: 90%;
@@ -36,10 +34,6 @@ button {
   margin: 6px;
   cursor: pointer;
 }
-
-#topbar {
-  margin-bottom: 10px;
-}
 </style>
 </head>
 
@@ -47,53 +41,56 @@ button {
 
 <h1>Bilderrätsel</h1>
 
-<div id="topbar">
-  <input type="file" id="bilderInput" multiple accept="image/*">
-  <button onclick="fullscreen()">Fullscreen</button>
-</div>
-
 <img id="bild">
 <div id="loesung"></div>
 
 <div>
   <button onclick="zurueck()">← Zurück</button>
   <button onclick="weiter()">Weiter →</button>
+  <button onclick="fullscreen()">Fullscreen</button>
 </div>
 
 <script>
+// ===================
+// 🔧 ANPASSEN
+// ===================
+const GITHUB_USER = "DieZiege1337";
+const GITHUB_REPO = "wasistdas";
+const ORDNER = "bilder";
+// ===================
+
 let bilder = [];
 let index = 0;
 let loesungSichtbar = false;
 
-// Bilder laden (Firefox-sicher)
-document.getElementById("bilderInput").addEventListener("change", e => {
-  bilder = [];
+async function ladeBilder() {
+  const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${ORDNER}`;
+  const res = await fetch(url);
+  const daten = await res.json();
 
-  for (const file of e.target.files) {
-    if (file.type.startsWith("image")) {
-      const name = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " ");
-      bilder.push({
-        src: URL.createObjectURL(file),
-        loesung: name
-      });
-    }
-  }
+  bilder = daten
+    .filter(f => f.type === "file" && f.name.match(/\.(jpg|jpeg|png|webp)$/i))
+    .map(f => ({
+      src: f.download_url,
+      loesung: f.name
+        .replace(/\.[^/.]+$/, "")
+        .replace(/[_-]/g, " ")
+    }));
 
-  if (bilder.length === 0) {
-    alert("Keine Bilder geladen.");
+  if (!bilder.length) {
+    alert("Keine Bilder gefunden.");
     return;
   }
 
   shuffle(bilder);
-  index = 0;
   anzeigen();
-});
+}
 
-// Zufällige Reihenfolge (Fisher–Yates)
-function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i--) {
+// Zufällige Reihenfolge
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
+    [a[i], a[j]] = [a[j], a[i]];
   }
 }
 
@@ -106,8 +103,6 @@ function anzeigen() {
 }
 
 function weiter() {
-  if (!bilder.length) return;
-
   if (!loesungSichtbar) {
     document.getElementById("loesung").style.display = "block";
     loesungSichtbar = true;
@@ -128,11 +123,14 @@ function fullscreen() {
   document.documentElement.requestFullscreen();
 }
 
-// Tastatursteuerung
+// Tastatur
 document.addEventListener("keydown", e => {
   if (e.key === "ArrowRight" || e.key === " ") weiter();
   if (e.key === "ArrowLeft") zurueck();
 });
+
+// Start
+ladeBilder();
 </script>
 
 </body>
